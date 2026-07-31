@@ -64,6 +64,8 @@ release notes.
 
 ![MicroTime main window](docs/screenshots/main-light.png)
 
+![MicroTime floating timer](docs/screenshots/floating-timer.png)
+
 ![MicroTime settings](docs/screenshots/settings-dark.png)
 
 ## What it includes
