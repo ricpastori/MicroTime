@@ -55,6 +55,6 @@ jobs:
           tagName: v__VERSION__
           releaseName: "MicroTime v__VERSION__"
           releaseBody: "Review the release notes and choose the installer for your system."
-          releaseDraft: true
+          releaseDraft: false
           prerelease: false
           args: ${{ matrix.args }}
