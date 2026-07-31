@@ -71,7 +71,8 @@ release notes.
 ## What it includes
 
 - configurable focus sessions and breaks;
-- a minimal floating countdown with an optional always-on-top mode;
+- a minimal floating countdown with optional always-on-top and
+  visible-on-every-desktop modes (macOS);
 - native alarms, notifications, and system tray controls;
 - a 12-month heatmap of completed focus sessions;
 - system, light, and dark themes;

@@ -12,6 +12,7 @@ import {
   listenForInterruptRequest,
   playAlarm,
   selectBackupFile,
+  sendProgressNotification,
   sendSessionNotification,
   setFloatingTimerVisible,
   showMainWindow,
@@ -21,6 +22,8 @@ import { createRepository, type Repository } from "../services/repository";
 import { DEFAULT_SETTINGS, type Session, type SessionType, type Settings } from "../types";
 
 type Notice = { kind: "success" | "error"; message: string } | null;
+
+const PROGRESS_NOTIFICATION_INTERVAL_SECONDS = 180;
 
 export function useMicroTime() {
   const repositoryRef = useRef<Repository | null>(null);
@@ -124,7 +127,10 @@ export function useMicroTime() {
             await sendSessionNotification(restored.completedDuringRestore.type);
           }
         }
-        await configureFloatingTimer(restoredSettings.floatingTimerAlwaysOnTop);
+        await configureFloatingTimer(
+          restoredSettings.floatingTimerAlwaysOnTop,
+          restoredSettings.floatingTimerVisibleOnAllSpaces,
+        );
         await refresh();
         if (restored.session) {
           await setFloatingTimerVisible(true);
@@ -151,6 +157,7 @@ export function useMicroTime() {
     if (!activeSession) return;
     let disposed = false;
     let running = false;
+    let notifiedIntervals = 0;
     const tick = async () => {
       if (disposed || running) return;
       running = true;
@@ -160,6 +167,15 @@ export function useMicroTime() {
         setRemainingSeconds(snapshot.remainingSeconds);
         if (snapshot.remainingSeconds === 0) {
           await finish(activeSession, snapshot.nowUtc);
+          return;
+        }
+        const elapsedSeconds = activeSession.plannedDurationSeconds - snapshot.remainingSeconds;
+        const dueIntervals = Math.floor(elapsedSeconds / PROGRESS_NOTIFICATION_INTERVAL_SECONDS);
+        if (dueIntervals > notifiedIntervals) {
+          notifiedIntervals = dueIntervals;
+          if (settings.notificationsEnabled) {
+            await sendProgressNotification(activeSession.type, snapshot.remainingSeconds);
+          }
         }
       } finally {
         running = false;
@@ -171,7 +187,7 @@ export function useMicroTime() {
       disposed = true;
       window.clearInterval(interval);
     };
-  }, [activeSession, finish]);
+  }, [activeSession, finish, settings.notificationsEnabled]);
 
   useEffect(() => {
     document.documentElement.dataset.theme = settings.theme;
@@ -188,7 +204,7 @@ export function useMicroTime() {
       setFinishedType(null);
       setActiveSession(session);
       setRemainingSeconds(durationSeconds);
-      await configureFloatingTimer(settings.floatingTimerAlwaysOnTop);
+      await configureFloatingTimer(settings.floatingTimerAlwaysOnTop, settings.floatingTimerVisibleOnAllSpaces);
       await setFloatingTimerVisible(true);
       await broadcastDataChanged();
       await createAutomaticBackup(settings);
@@ -224,7 +240,7 @@ export function useMicroTime() {
     if (!repository) return;
     try {
       await repository.saveSettings(next);
-      await configureFloatingTimer(next.floatingTimerAlwaysOnTop);
+      await configureFloatingTimer(next.floatingTimerAlwaysOnTop, next.floatingTimerVisibleOnAllSpaces);
       await broadcastDataChanged();
       await createAutomaticBackup(next);
     } catch (error) {

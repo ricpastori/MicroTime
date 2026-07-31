@@ -1,5 +1,6 @@
 use chrono::{DateTime, Duration, Utc};
 use serde::Serialize;
+use std::sync::Mutex;
 use tauri::{
     menu::{Menu, MenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
@@ -119,6 +120,12 @@ fn show_main_window(app: AppHandle) -> Result<(), String> {
     show_and_focus(&window).map_err(|error| error.to_string())
 }
 
+#[derive(Clone, Copy, Default)]
+struct FloatingTimerConfig {
+    always_on_top: bool,
+    visible_on_all_spaces: bool,
+}
+
 #[tauri::command]
 fn set_floating_timer_visible(app: AppHandle, visible: bool) -> Result<(), String> {
     let window = app
@@ -126,20 +133,173 @@ fn set_floating_timer_visible(app: AppHandle, visible: bool) -> Result<(), Strin
         .ok_or_else(|| "Mini-timer is not available".to_string())?;
     if visible {
         let _ = position_floating_timer(&app);
-        window.show().map_err(|error| error.to_string())
+        window.show().map_err(|error| error.to_string())?;
     } else {
-        window.hide().map_err(|error| error.to_string())
+        window.hide().map_err(|error| error.to_string())?;
+    }
+    // Showing/hiding can race with the level/collection-behavior dispatch
+    // from the last configure_floating_timer call (Tao's own window methods
+    // use an async GCD dispatch we don't control), so reassert our config
+    // now that visibility has actually changed. This also keeps the app's
+    // activation policy (regular vs. accessory) in sync with whether the
+    // window is actually on screen.
+    let config = *app.state::<Mutex<FloatingTimerConfig>>().lock().unwrap();
+    apply_floating_timer_window_level(
+        &window,
+        config.always_on_top,
+        config.visible_on_all_spaces,
+        if visible { "after-show" } else { "after-hide" },
+    )
+}
+
+// Assumes it is already running on the main thread (AppKit requires that for
+// any NSWindow mutation). Used both from the dispatched command path below
+// and directly from the Space-change observer, which AppKit already invokes
+// on the main thread.
+#[cfg(target_os = "macos")]
+fn apply_floating_timer_window_level_on_main_thread<R: Runtime>(
+    window: &WebviewWindow<R>,
+    always_on_top: bool,
+    visible_on_all_spaces: bool,
+    context: &'static str,
+) -> tauri::Result<()> {
+    use objc2_app_kit::{NSFloatingWindowLevel, NSNormalWindowLevel, NSStatusWindowLevel, NSWindow, NSWindowCollectionBehavior};
+
+    let ns_window = window.ns_window()? as *const NSWindow;
+    let ns_window = unsafe { &*ns_window };
+    // Switch to accessory policy *before* touching collection behavior:
+    // WindowServer only lets CanJoinAllSpaces/FullScreenAuxiliary put a
+    // window above another app's full-screen Space for menu-bar-style
+    // (accessory) apps, so this has to be in effect first.
+    let should_be_accessory = visible_on_all_spaces && window.is_visible().unwrap_or(false);
+    sync_activation_policy(should_be_accessory);
+    if visible_on_all_spaces {
+        ns_window.setCollectionBehavior(
+            NSWindowCollectionBehavior::CanJoinAllSpaces | NSWindowCollectionBehavior::FullScreenAuxiliary,
+        );
+        // Status-bar level is what lets a window sit above another app's
+        // full-screen Space, the same trick menu bar widgets use; plain
+        // NSFloatingWindowLevel only wins within the current Space.
+        ns_window.setLevel(NSStatusWindowLevel);
+        if window.is_visible().unwrap_or(false) {
+            ns_window.orderFrontRegardless();
+        }
+    } else {
+        ns_window.setCollectionBehavior(NSWindowCollectionBehavior::Managed);
+        ns_window.setLevel(if always_on_top { NSFloatingWindowLevel } else { NSNormalWindowLevel });
+    }
+    eprintln!(
+        "[microtime] {context}: collectionBehavior={:?} level={} accessory={should_be_accessory}",
+        ns_window.collectionBehavior(),
+        ns_window.level()
+    );
+    Ok(())
+}
+
+#[cfg(target_os = "macos")]
+fn sync_activation_policy(should_be_accessory: bool) {
+    use objc2::MainThreadMarker;
+    use objc2_app_kit::{NSApplication, NSApplicationActivationPolicy};
+
+    let Some(main_thread) = MainThreadMarker::new() else { return };
+    let app = NSApplication::sharedApplication(main_thread);
+    let policy = if should_be_accessory {
+        NSApplicationActivationPolicy::Accessory
+    } else {
+        NSApplicationActivationPolicy::Regular
+    };
+    if app.activationPolicy() != policy {
+        let ok = app.setActivationPolicy(policy);
+        eprintln!("[microtime] setActivationPolicy({policy:?}) succeeded={ok}");
     }
 }
 
+#[cfg(target_os = "macos")]
+fn apply_floating_timer_window_level<R: Runtime>(
+    window: &WebviewWindow<R>,
+    always_on_top: bool,
+    visible_on_all_spaces: bool,
+    context: &'static str,
+) -> Result<(), String> {
+    // Tauri commands don't run on the main thread, and mixing this with
+    // Tao's own async set_always_on_top dispatch let the two race and stomp
+    // on each other, so hop over explicitly and wait for the result.
+    let (tx, rx) = std::sync::mpsc::channel();
+    let main_thread_window = window.clone();
+    window
+        .run_on_main_thread(move || {
+            let outcome = apply_floating_timer_window_level_on_main_thread(
+                &main_thread_window,
+                always_on_top,
+                visible_on_all_spaces,
+                context,
+            );
+            let _ = tx.send(outcome);
+        })
+        .map_err(|error| error.to_string())?;
+    rx.recv().map_err(|error| error.to_string())?.map_err(|error| error.to_string())
+}
+
+#[cfg(not(target_os = "macos"))]
+fn apply_floating_timer_window_level<R: Runtime>(
+    window: &WebviewWindow<R>,
+    always_on_top: bool,
+    _visible_on_all_spaces: bool,
+    _context: &'static str,
+) -> Result<(), String> {
+    window.set_always_on_top(always_on_top).map_err(|error| error.to_string())
+}
+
+#[cfg(target_os = "macos")]
+fn register_space_change_observer(app: &tauri::App) {
+    use block2::RcBlock;
+    use objc2_app_kit::{NSWorkspace, NSWorkspaceActiveSpaceDidChangeNotification};
+
+    let app_handle = app.handle().clone();
+    let block = RcBlock::new(move |_notification: std::ptr::NonNull<objc2_foundation::NSNotification>| {
+        let Some(window) = app_handle.get_webview_window("floating-timer") else {
+            return;
+        };
+        let config = *app_handle.state::<Mutex<FloatingTimerConfig>>().lock().unwrap();
+        if config.visible_on_all_spaces {
+            let _ = apply_floating_timer_window_level_on_main_thread(
+                &window,
+                config.always_on_top,
+                true,
+                "space-change",
+            );
+        }
+    });
+
+    unsafe {
+        let center = NSWorkspace::sharedWorkspace().notificationCenter();
+        let observer = center.addObserverForName_object_queue_usingBlock(
+            Some(NSWorkspaceActiveSpaceDidChangeNotification),
+            None,
+            None,
+            &block,
+        );
+        // Intentionally leaked: this observer must live for the whole app
+        // lifetime, and NSNotificationCenter keeps its own reference anyway.
+        std::mem::forget(observer);
+    }
+}
+
+#[cfg(not(target_os = "macos"))]
+fn register_space_change_observer(_app: &tauri::App) {}
+
 #[tauri::command]
-fn configure_floating_timer(app: AppHandle, always_on_top: bool) -> Result<(), String> {
+fn configure_floating_timer(
+    app: AppHandle,
+    always_on_top: bool,
+    visible_on_all_spaces: bool,
+) -> Result<(), String> {
     let window = app
         .get_webview_window("floating-timer")
         .ok_or_else(|| "Mini-timer is not available".to_string())?;
-    window
-        .set_always_on_top(always_on_top)
-        .map_err(|error| error.to_string())
+    *app.state::<Mutex<FloatingTimerConfig>>().lock().unwrap() =
+        FloatingTimerConfig { always_on_top, visible_on_all_spaces };
+    apply_floating_timer_window_level(&window, always_on_top, visible_on_all_spaces, "configure")
 }
 
 fn toggle_floating_timer<R: Runtime>(app: &AppHandle<R>) {
@@ -215,9 +375,16 @@ pub fn run() {
             sql: include_str!("../migrations/0002_import_staging.sql"),
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 3,
+            description: "floating timer visible on all spaces",
+            sql: include_str!("../migrations/0003_floating_timer_visible_on_all_spaces.sql"),
+            kind: MigrationKind::Up,
+        },
     ];
 
     tauri::Builder::default()
+        .manage(Mutex::new(FloatingTimerConfig::default()))
         .plugin(
             tauri_plugin_sql::Builder::default()
                 .add_migrations(DATABASE_URL, migrations)
@@ -240,6 +407,7 @@ pub fn run() {
         .setup(|app| {
             #[cfg(all(target_os = "macos", debug_assertions))]
             set_macos_dev_icon();
+            register_space_change_observer(app);
             build_tray(app)?;
             if let Some(window) = app.get_webview_window("main") {
                 show_and_focus(&window)?;

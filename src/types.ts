@@ -27,6 +27,7 @@ export interface Settings {
   alarmSound: AlarmSound;
   notificationsEnabled: boolean;
   floatingTimerAlwaysOnTop: boolean;
+  floatingTimerVisibleOnAllSpaces: boolean;
   theme: Theme;
   backupDirectory: string | null;
 }
@@ -57,6 +58,7 @@ export const DEFAULT_SETTINGS: Settings = {
   alarmSound: "gentle",
   notificationsEnabled: true,
   floatingTimerAlwaysOnTop: true,
+  floatingTimerVisibleOnAllSpaces: false,
   theme: "system",
   backupDirectory: null,
 };

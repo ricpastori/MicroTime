@@ -20,9 +20,9 @@ export async function getTimerSnapshot(durationSeconds: number, plannedEndAt?: s
   });
 }
 
-export async function configureFloatingTimer(alwaysOnTop: boolean): Promise<void> {
+export async function configureFloatingTimer(alwaysOnTop: boolean, visibleOnAllSpaces: boolean): Promise<void> {
   if (!isTauri()) return;
-  await invoke("configure_floating_timer", { alwaysOnTop });
+  await invoke("configure_floating_timer", { alwaysOnTop, visibleOnAllSpaces });
 }
 
 export async function setFloatingTimerVisible(visible: boolean): Promise<void> {
@@ -69,10 +69,7 @@ export function playAlarm(sound: Settings["alarmSound"]): void {
   void audio.play().catch(() => undefined);
 }
 
-export async function sendSessionNotification(type: SessionType): Promise<boolean> {
-  const title = type === "focus" ? en.notificationFocusTitle : en.notificationBreakTitle;
-  const body = type === "focus" ? en.notificationFocusBody : en.notificationBreakBody;
-
+async function deliverNotification(title: string, body: string): Promise<boolean> {
   if (isTauri()) {
     let granted = await isPermissionGranted();
     if (!granted) {
@@ -89,6 +86,20 @@ export async function sendSessionNotification(type: SessionType): Promise<boolea
     return true;
   }
   return false;
+}
+
+export async function sendSessionNotification(type: SessionType): Promise<boolean> {
+  const title = type === "focus" ? en.notificationFocusTitle : en.notificationBreakTitle;
+  const body = type === "focus" ? en.notificationFocusBody : en.notificationBreakBody;
+  return deliverNotification(title, body);
+}
+
+export async function sendProgressNotification(type: SessionType, remainingSeconds: number): Promise<boolean> {
+  const minutesLeft = Math.max(1, Math.round(remainingSeconds / 60));
+  const title = type === "focus" ? en.notificationFocusProgressTitle : en.notificationBreakProgressTitle;
+  const body =
+    type === "focus" ? en.notificationFocusProgressBody(minutesLeft) : en.notificationBreakProgressBody(minutesLeft);
+  return deliverNotification(title, body);
 }
 
 function downloadTextFile(name: string, content: string): void {

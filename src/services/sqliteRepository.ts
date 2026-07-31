@@ -22,6 +22,7 @@ interface SettingsRow {
   alarm_sound: Settings["alarmSound"];
   notifications_enabled: number;
   floating_timer_always_on_top: number;
+  floating_timer_visible_on_all_spaces: number;
   theme: Settings["theme"];
   backup_directory: string | null;
 }
@@ -53,6 +54,7 @@ function mapSettings(row: SettingsRow | undefined): Settings {
     alarmSound: row.alarm_sound,
     notificationsEnabled: row.notifications_enabled === 1,
     floatingTimerAlwaysOnTop: row.floating_timer_always_on_top === 1,
+    floatingTimerVisibleOnAllSpaces: row.floating_timer_visible_on_all_spaces === 1,
     theme: row.theme,
     backupDirectory: row.backup_directory,
   };
@@ -66,6 +68,7 @@ function settingsParameters(settings: Settings): (string | number | null)[] {
     settings.alarmSound,
     settings.notificationsEnabled ? 1 : 0,
     settings.floatingTimerAlwaysOnTop ? 1 : 0,
+    settings.floatingTimerVisibleOnAllSpaces ? 1 : 0,
     settings.theme,
     settings.backupDirectory,
   ];
@@ -91,7 +94,8 @@ class SqliteRepository implements Repository {
   async getSettings(): Promise<Settings> {
     const rows = await this.database.select<SettingsRow[]>(
       `SELECT focus_duration_minutes, break_duration_minutes, alarm_enabled, alarm_sound,
-              notifications_enabled, floating_timer_always_on_top, theme, backup_directory
+              notifications_enabled, floating_timer_always_on_top, floating_timer_visible_on_all_spaces,
+              theme, backup_directory
        FROM settings WHERE singleton = 1`,
     );
     return mapSettings(rows[0]);
@@ -101,8 +105,9 @@ class SqliteRepository implements Repository {
     await this.database.execute(
       `INSERT INTO settings (
          singleton, focus_duration_minutes, break_duration_minutes, alarm_enabled, alarm_sound,
-         notifications_enabled, floating_timer_always_on_top, theme, backup_directory
-       ) VALUES (1, $1, $2, $3, $4, $5, $6, $7, $8)
+         notifications_enabled, floating_timer_always_on_top, floating_timer_visible_on_all_spaces,
+         theme, backup_directory
+       ) VALUES (1, $1, $2, $3, $4, $5, $6, $7, $8, $9)
        ON CONFLICT(singleton) DO UPDATE SET
          focus_duration_minutes = excluded.focus_duration_minutes,
          break_duration_minutes = excluded.break_duration_minutes,
@@ -110,6 +115,7 @@ class SqliteRepository implements Repository {
          alarm_sound = excluded.alarm_sound,
          notifications_enabled = excluded.notifications_enabled,
          floating_timer_always_on_top = excluded.floating_timer_always_on_top,
+         floating_timer_visible_on_all_spaces = excluded.floating_timer_visible_on_all_spaces,
          theme = excluded.theme,
          backup_directory = excluded.backup_directory`,
       settingsParameters(settings),
@@ -195,8 +201,9 @@ class SqliteRepository implements Repository {
     await this.database.execute(
       `INSERT INTO import_settings_staging (
          singleton, focus_duration_minutes, break_duration_minutes, alarm_enabled, alarm_sound,
-         notifications_enabled, floating_timer_always_on_top, theme, backup_directory
-       ) VALUES (1, $1, $2, $3, $4, $5, $6, $7, $8)`,
+         notifications_enabled, floating_timer_always_on_top, floating_timer_visible_on_all_spaces,
+         theme, backup_directory
+       ) VALUES (1, $1, $2, $3, $4, $5, $6, $7, $8, $9)`,
       settingsParameters(validated.settings),
     );
 

@@ -34,6 +34,7 @@ function isSettings(value: unknown): value is Settings {
     ALARM_SOUNDS.includes(value.alarmSound as (typeof ALARM_SOUNDS)[number]) &&
     typeof value.notificationsEnabled === "boolean" &&
     typeof value.floatingTimerAlwaysOnTop === "boolean" &&
+    typeof value.floatingTimerVisibleOnAllSpaces === "boolean" &&
     typeof value.theme === "string" &&
     THEMES.includes(value.theme as (typeof THEMES)[number]) &&
     (value.backupDirectory === null || typeof value.backupDirectory === "string")

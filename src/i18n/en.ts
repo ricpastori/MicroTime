@@ -50,6 +50,7 @@ export const en = {
   preview: "Preview",
   notifications: "Notifications",
   alwaysOnTop: "Keep mini-timer on top",
+  visibleOnAllSpaces: "Show mini-timer on every desktop",
   theme: "Theme",
   system: "System",
   light: "Light",
@@ -83,4 +84,8 @@ export const en = {
   notificationFocusBody: "Choose focus or break.",
   notificationBreakTitle: "Break complete",
   notificationBreakBody: "Start a new focus session.",
+  notificationFocusProgressTitle: "Still focusing",
+  notificationFocusProgressBody: (minutesLeft: number) => `${minutesLeft} min left`,
+  notificationBreakProgressTitle: "Still on break",
+  notificationBreakProgressBody: (minutesLeft: number) => `${minutesLeft} min left`,
 } as const;

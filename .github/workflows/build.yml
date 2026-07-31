@@ -68,4 +68,52 @@ jobs:
       - run: cargo test --manifest-path src-tauri/Cargo.toml --locked
       - name: Build Tauri bundles
         run: npm run tauri:build -- --target ${{ matrix.target }}
-      # Bundles remain on the temporary runner. Tagged releases are handled by release.yml.
+      # Signed, notarized, versioned releases are handled by release.yml on
+      # tag push. These are unsigned dev builds, kept around so the rolling
+      # "latest" release below always has something fresh to publish.
+      - name: Upload bundle artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: bundles-${{ matrix.target }}
+          path: |
+            src-tauri/target/${{ matrix.target }}/release/bundle/dmg/*.dmg
+            src-tauri/target/${{ matrix.target }}/release/bundle/msi/*.msi
+            src-tauri/target/${{ matrix.target }}/release/bundle/nsis/*.exe
+            src-tauri/target/${{ matrix.target }}/release/bundle/deb/*.deb
+            src-tauri/target/${{ matrix.target }}/release/bundle/rpm/*.rpm
+            src-tauri/target/${{ matrix.target }}/release/bundle/appimage/*.AppImage
+          if-no-files-found: ignore
+          retention-days: 7
+
+  publish-latest:
+    name: Publish latest build
+    needs: desktop
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: bundles-*
+          path: dist-bundles
+          merge-multiple: true
+      - name: Remove previous latest release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release delete latest --yes --cleanup-tag --repo "${{ github.repository }}" || true
+      - name: Publish rolling latest release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: "Latest build (main)"
+          body: |
+            Automatic, unsigned development build from the latest commit on `main` (${{ github.sha }}).
+            Rebuilt on every push, so this always has something installable without waiting for a
+            tagged release. For signed, notarized macOS builds, see the
+            [tagged releases](../../releases) instead.
+          prerelease: true
+          draft: false
+          make_latest: false
+          fail_on_unmatched_files: false
+          files: dist-bundles/**/*

@@ -236,6 +236,17 @@ export function SettingsDialog({ open, settings, onClose, onUpdate, onExport, on
                 onChange={(event) => void update({ floatingTimerAlwaysOnTop: event.target.checked })}
               />
             </label>
+            <label className="setting-row">
+              <span>
+                <strong>{en.visibleOnAllSpaces}</strong>
+              </span>
+              <input
+                className="switch"
+                type="checkbox"
+                checked={settings.floatingTimerVisibleOnAllSpaces}
+                onChange={(event) => void update({ floatingTimerVisibleOnAllSpaces: event.target.checked })}
+              />
+            </label>
             <div className="setting-row">
               <div>
                 <strong>{en.theme}</strong>

@@ -14,6 +14,7 @@ A backup is a human-readable UTF-8 JSON file. Its root has the following shape:
     "alarmSound": "gentle",
     "notificationsEnabled": true,
     "floatingTimerAlwaysOnTop": true,
+    "floatingTimerVisibleOnAllSpaces": false,
     "theme": "system",
     "backupDirectory": null
   },
