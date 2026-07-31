@@ -352,11 +352,23 @@ fn build_tray(app: &mut tauri::App) -> tauri::Result<()> {
             }
         });
 
-    if let Some(icon) = app.default_window_icon() {
-        builder = builder.icon(icon.clone());
-    }
+    builder = set_tray_icon(builder, app);
     builder.build(app)?;
     Ok(())
+}
+
+// The tray/menu-bar slot is much smaller than the Dock icon, so the full
+// app icon reads as an oversized color block there. Use a simplified,
+// appropriately-sized glyph instead, falling back to the app icon if it
+// somehow fails to decode.
+fn set_tray_icon<R: Runtime>(builder: TrayIconBuilder<R>, app: &tauri::App<R>) -> TrayIconBuilder<R> {
+    match tauri::image::Image::from_bytes(include_bytes!("../../assets/tray-icon-color.png")) {
+        Ok(icon) => builder.icon(icon),
+        Err(_) => match app.default_window_icon() {
+            Some(icon) => builder.icon(icon.clone()),
+            None => builder,
+        },
+    }
 }
 
 pub fn run() {

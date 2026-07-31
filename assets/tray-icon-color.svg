@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="100 150 954 954">
+  <title>MicroTime</title>
+  <mask id="ring-hole-mascot">
+    <rect x="0" y="0" width="1254" height="1254" fill="#fff"/>
+    <circle cx="627" cy="658" r="292" fill="#000"/>
+  </mask>
+  <path d="M572 246h110v72H572z" fill="#fff"/>
+  <rect x="527" y="174" width="201" height="102" rx="50" fill="#fff"/>
+  <path d="M873 305c9-7 22-5 30 3l55 53c11 10 12 24 2 36l-42 44-88-85z" fill="#fff"/>
+  <circle cx="627" cy="658" r="370" fill="#fff" mask="url(#ring-hole-mascot)"/>
+  <path d="m225 496 402 64 402-64-180 145c-42 35-97 50-158 35l-42-11c-14-4-29-5-45 1l-37 11c-61 16-117 1-160-36z" fill="#fff"/>
+</svg>

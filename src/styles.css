@@ -163,7 +163,7 @@ input:focus-visible {
 
 .app-header {
   min-height: 44px;
-  padding: 6px 14px 7px;
+  padding: 40px 14px 7px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -723,7 +723,7 @@ input:focus-visible {
 
 .settings-header {
   min-height: 46px;
-  padding: 7px 16px 8px;
+  padding: 40px 16px 8px;
   display: flex;
   align-items: center;
   justify-content: space-between;

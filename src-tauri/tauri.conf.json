@@ -22,7 +22,10 @@
         "center": true,
         "visible": true,
         "resizable": true,
-        "decorations": true
+        "decorations": true,
+        "titleBarStyle": "Overlay",
+        "hiddenTitle": true,
+        "trafficLightPosition": { "x": 16, "y": 20 }
       },
       {
         "label": "floating-timer",

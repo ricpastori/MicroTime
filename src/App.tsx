@@ -32,7 +32,7 @@ function MainApplication() {
 
   return (
     <div className="app-shell">
-      <header className="app-header">
+      <header className="app-header" data-tauri-drag-region>
         <Logo />
         <button
           className="button button--settings"

@@ -60,6 +60,16 @@ Some operating systems may warn about builds that are not yet signed or
 notarized. Signing status and platform-specific details are included in the
 release notes.
 
+On macOS specifically, an unsigned, downloaded app may show
+**"MicroTime.app is damaged and can't be opened"**. The app isn't actually
+damaged — this is Gatekeeper's message for unsigned apps that have the
+quarantine flag browsers attach to downloads. Clear it from Terminal and open
+the app normally:
+
+```sh
+xattr -cr /Applications/MicroTime.app
+```
+
 ## Screenshots
 
 ![MicroTime main window](docs/screenshots/main-light.png)

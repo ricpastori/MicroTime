@@ -56,7 +56,7 @@ export function SettingsDialog({ open, settings, onClose, onUpdate, onExport, on
         aria-labelledby="settings-title"
         tabIndex={-1}
       >
-        <header className="settings-header">
+        <header className="settings-header" data-tauri-drag-region>
           <div>
             <h2 id="settings-title">{en.settingsTitle}</h2>
           </div>
