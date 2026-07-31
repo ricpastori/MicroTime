@@ -1,0 +1,51 @@
+# JavaScript
+node_modules/
+dist/
+*.tsbuildinfo
+coverage/
+
+# Rust / Tauri
+src-tauri/target/
+src-tauri/gen/
+
+# Packaged desktop builds copied outside target/
+release/
+artifacts/
+*.app/
+*.dmg
+*.pkg
+*.msi
+*.msix
+*.AppImage
+*.deb
+*.rpm
+*.exe
+
+# AI coding assistants
+.claude/
+/agents/
+.cursor/
+.windsurf/
+.continue/
+.codeium/
+.cody/
+.aider*
+
+# IDE and operating system
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# Local environment and certificates
+.env
+.env.*
+!.env.example
+*.p12
+*.pfx
+*.cer
+*.key
+
+# Logs
+*.log
+npm-debug.log*

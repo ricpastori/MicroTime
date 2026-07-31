@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="100 150 954 954">
+  <title>MicroTime</title>
+  <clipPath id="shine"><path d="m225 496 402 64 402-64-180 145c-42 35-97 50-158 35l-42-11c-14-4-29-5-45 1l-37 11c-61 16-117 1-160-36z"/></clipPath>
+  <path d="M572 246h110v72H572z" fill="#fff6e8"/><path d="M592 266h70v44h-70z" fill="#ff78c5"/>
+  <rect x="527" y="174" width="201" height="102" rx="50" fill="#fff6e8"/><rect x="547" y="194" width="161" height="62" rx="30" fill="#ff9ad5"/>
+  <path d="M873 305c9-7 22-5 30 3l55 53c11 10 12 24 2 36l-42 44-88-85z" fill="#fff6e8"/><path d="M880 328c6-6 13-5 19 1l42 41c6 6 6 12 0 19l-27 28-61-62z" fill="#60d5da"/>
+  <circle cx="627" cy="658" r="370" fill="#fff6e8"/><circle cx="627" cy="658" r="350" fill="#ff78c5"/><circle cx="627" cy="658" r="292" fill="#14172c"/><circle cx="627" cy="658" r="272" fill="#fff6e8"/>
+  <path d="m225 496 402 64 402-64-180 145c-42 35-97 50-158 35l-42-11c-14-4-29-5-45 1l-37 11c-61 16-117 1-160-36z" fill="#14172c"/><path d="m356 530 71 11 106 128-57-1z" clip-path="url(#shine)" fill="#fff9ed"/>
+  <path d="M544 717c28-2 56 8 83 8 28 0 56-10 83-7 26 3 38 26 37 61-2 67-44 115-120 115s-118-45-120-115c-1-35 9-59 37-62z" fill="#14172c"/><path d="M551 852c19-25 47-38 76-38s56 13 75 39c-20 21-46 32-75 32-30 0-56-11-76-33z" fill="#ff9ad5"/>
+</svg>
