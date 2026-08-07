@@ -35,6 +35,14 @@ export function useMicroTime() {
   const [finishedType, setFinishedType] = useState<SessionType | null>(null);
   const [remainingSeconds, setRemainingSeconds] = useState(0);
   const [notice, setNotice] = useState<Notice>(null);
+  const [todayKey, setTodayKey] = useState(() => localDateKey());
+
+  const syncToday = useCallback(() => {
+    setTodayKey((previous) => {
+      const current = localDateKey();
+      return previous === current ? previous : current;
+    });
+  }, []);
 
   const refresh = useCallback(async () => {
     const repository = repositoryRef.current;
@@ -90,6 +98,7 @@ export function useMicroTime() {
           await refresh();
           return;
         }
+        syncToday();
         setFinishedType(session.type);
         if (settings.alarmEnabled) playAlarm(settings.alarmSound);
         if (settings.notificationsEnabled) {
@@ -104,7 +113,7 @@ export function useMicroTime() {
         completionLockRef.current = false;
       }
     },
-    [createAutomaticBackup, refresh, settings],
+    [createAutomaticBackup, refresh, settings, syncToday],
   );
 
   useEffect(() => {
@@ -193,6 +202,11 @@ export function useMicroTime() {
     document.documentElement.dataset.theme = settings.theme;
   }, [settings.theme]);
 
+  useEffect(() => {
+    const interval = window.setInterval(syncToday, 60_000);
+    return () => window.clearInterval(interval);
+  }, [syncToday]);
+
   async function start(type: SessionType) {
     const repository = repositoryRef.current;
     if (!repository || activeSession) return;
@@ -280,7 +294,7 @@ export function useMicroTime() {
   }
 
   const activity = groupFocusCompletionsByLocalDay(sessions);
-  const completedToday = activity.find((day) => day.date === localDateKey())?.count ?? 0;
+  const completedToday = activity.find((day) => day.date === todayKey)?.count ?? 0;
   const progress = activeSession ? calculateProgress(activeSession, Date.now()) : 0;
 
   return {

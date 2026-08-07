@@ -1,6 +1,6 @@
 [package]
 name = "microtime"
-version = "1.0.0"
+version = "1.0.1"
 description = "Local focus sessions with no account required"
 authors = ["MicroTime contributors"]
 edition = "2021"
